@@ -138,26 +138,28 @@ model Booking {
 }
 
 model Passenger {
-  id         String  @id @default(cuid())
+  id         String    @id @default(cuid())
   bookingId  String
-  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   seatNumber String
   name       String
   age        Int
-  gender     String  @default("OTHER") // MALE, FEMALE, OTHER
+  gender     String    @default("OTHER") // MALE, FEMALE, OTHER
+  isBoarded  Boolean   @default(false)
+  boardedAt  DateTime?
 
   @@index([bookingId])
 }
 
 model CancellationRule {
-  id                      String   @id @default(cuid())
-  name                    String
-  minHoursBeforeDeparture Int      // e.g. 24
-  maxHoursBeforeDeparture Int?     // e.g. null for >24, or 24 for 12-24
-  refundPercentage        Float    // e.g. 90.0
-  cancellationFeePercentage Float  // e.g. 10.0
-  active                  Boolean  @default(true)
-  createdAt               DateTime @default(now())
+  id                        String   @id @default(cuid())
+  name                      String
+  minHoursBeforeDeparture   Int      // e.g. 24
+  maxHoursBeforeDeparture   Int?     // e.g. null for >24, or 24 for 12-24
+  refundPercentage          Float    // e.g. 90.0
+  cancellationFeePercentage Float    // e.g. 10.0
+  active                    Boolean  @default(true)
+  createdAt                 DateTime @default(now())
 }
 
 model AuditLog {
@@ -166,8 +168,8 @@ model AuditLog {
   actorRole   String?
   actorEmail  String?
   actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action      String   // BOOKING_CREATED, BOOKING_CANCELLED, TRIP_CREATED, etc.
-  entityType  String   // Booking, Trip, Seat, Cancellation
+  action      String   // BOOKING_CREATED, BOOKING_CANCELLED, TRIP_CREATED, PASSENGER_CHECKED_IN, etc.
+  entityType  String   // Booking, Trip, Seat, Cancellation, Passenger
   entityId    String
   details     String   // JSON string
   createdAt   DateTime @default(now())

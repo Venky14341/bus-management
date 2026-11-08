@@ -9,6 +9,8 @@ export interface TripSearchParams {
   operatorId?: string;
   minPrice?: number;
   maxPrice?: number;
+  timeWindow?: string; // 'morning' | 'afternoon' | 'evening' | 'night'
+  sortBy?: string; // 'price_asc' | 'price_desc' | 'time_asc' | 'rating_desc'
 }
 
 export class TripService {
@@ -86,8 +88,8 @@ export class TripService {
       }
     });
 
-    // Calculate real-time available seat count for each trip
-    return trips.map(t => {
+    // Map and calculate real-time available seat count for each trip
+    let mapped = trips.map(t => {
       const totalSeats = t.seats.length;
       const bookedSeats = t.seats.filter(s => s.isBooked).length;
       const availableSeats = totalSeats - bookedSeats;
@@ -139,6 +141,35 @@ export class TripService {
         }
       };
     });
+
+    // Filter by departure time window if specified
+    if (params.timeWindow) {
+      mapped = mapped.filter(t => {
+        const hour = parseInt(t.departureTime.split(':')[0], 10);
+        if (params.timeWindow === 'morning') return hour >= 6 && hour < 12;
+        if (params.timeWindow === 'afternoon') return hour >= 12 && hour < 18;
+        if (params.timeWindow === 'evening') return hour >= 18 && hour < 23;
+        if (params.timeWindow === 'night') return hour >= 23 || hour < 6;
+        return true;
+      });
+    }
+
+    // Apply sorting
+    if (params.sortBy) {
+      if (params.sortBy === 'price_asc') {
+        mapped.sort((a, b) => a.baseFare - b.baseFare);
+      } else if (params.sortBy === 'price_desc') {
+        mapped.sort((a, b) => b.baseFare - a.baseFare);
+      } else if (params.sortBy === 'rating_desc') {
+        mapped.sort((a, b) => (b.bus.operator.rating || 0) - (a.bus.operator.rating || 0));
+      } else if (params.sortBy === 'time_asc') {
+        mapped.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
+      } else if (params.sortBy === 'duration_asc') {
+        mapped.sort((a, b) => a.route.estimatedHours - b.route.estimatedHours);
+      }
+    }
+
+    return mapped;
   }
 
   static async getTripDetails(tripId: string) {

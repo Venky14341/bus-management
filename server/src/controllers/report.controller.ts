@@ -15,6 +15,20 @@ export class ReportController {
     }
   }
 
+  static async toggleCheckIn(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { passengerId } = req.params;
+      const updated = await ReportService.togglePassengerCheckIn(passengerId, req.user!.id);
+      return res.status(200).json({
+        success: true,
+        message: updated.isBoarded ? 'Passenger checked in / boarded' : 'Passenger check-in revoked',
+        data: updated
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getDashboard(req: Request, res: Response, next: NextFunction) {
     try {
       const operatorId = req.user?.role === 'OPERATOR' ? req.user.operatorId || undefined : undefined;

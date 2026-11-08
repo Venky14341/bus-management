@@ -1,27 +1,29 @@
 # Algions Bus Booking Management System
 
 > **Full-Stack Web Development | Advanced Individual Project Assessment**  
-> **Client / Company**: ALGIONS AI LABS PRIVATE LIMITED  
+> **Company / Evaluator**: ALGIONS AI LABS PRIVATE LIMITED  
 > **Assigned Domain**: Bus Booking Management System  
-> **Tech Stack**: React 18, Node.js, Express, TypeScript, Prisma ORM, SQLite, Tailwind CSS, Jest, Swagger OpenAPI 3.0
+> **Tech Stack**: React 18, Node.js, Express, TypeScript, Prisma ORM, SQLite, Tailwind CSS, Jest, Supertest, Swagger OpenAPI 3.0
 
 ---
 
 ## 🌟 Executive Summary
 
-The **Algions Bus Booking Management System** is a responsive, database-backed enterprise web application supporting end-to-end journeys for operational staff and end-users. Built as a maintainable modular monolith, it enforces server-side role-based access control (RBAC), ACID-compliant transactional seat integrity to prevent double booking under high concurrency, a dynamic configurable cancellation rules engine with simulated refunds, and automated mathematical passenger manifest reconciliation.
+The **Algions Bus Booking Management System** is a responsive, database-backed enterprise travel management application supporting end-to-end operational staff and passenger journeys. Built as a maintainable modular monolith, it enforces server-side role-based access control (RBAC), ACID-compliant transactional seat integrity to prevent double booking under high concurrency, a dynamic configurable cancellation rules engine with simulated refunds, live passenger boarding check-ins, and automated mathematical passenger manifest reconciliation.
+
+The system features real-world Indian intercity bus operators (**VRL Travels, KSRTC Ambari Utsav & Airavat, Orange Tours, SRS Travels, IntrCity SmartBus, Zingbus Electric, Royal Express**), multi-axle luxury fleets (Volvo 9600 Sleeper, Scania Metrolink, Mercedes Super Cruiser, BharatBenz), and major transit corridors.
 
 ---
 
 ## 📋 Acceptance Criteria Verification
 
-| # | Acceptance Criteria | Implementation Mechanism | Test Evidence |
-|---|-------------------|--------------------------|---------------|
-| **1** | **Search valid trip & book available seat** | Real-time seat inventory calculation, origin/destination/date search, interactive visual seat layout (2+2 seater and 2+1 sleeper deck). | `tests/api.test.ts` (Trip Search & Discovery) |
-| **2** | **Two users cannot confirm the same seat on one trip** | ACID database transaction (`prisma.$transaction`) with optimistic concurrency checks (`isBooked: false`) and composite unique constraints (`[tripId, seatNumber]`). | `tests/api.test.ts` (CRITICAL CONCURRENCY TEST with `Promise.all` -> 1 confirmed, 1 HTTP 409 Conflict) |
-| **3** | **PNR includes correct passenger, route, date and seat details** | Unique PNR generation (`ALG-XXXXXX`), passenger manifest association, digital e-ticket view with printable boarding pass. | `tests/api.test.ts` (PNR & Ticket Validation) |
-| **4** | **Cancellation changes seat availability and refund status according to rule** | Configurable tiered refund engine (e.g., >24h = 90% refund, 12-24h = 50%, <12h = 0%); atomic seat release back to available inventory. | `tests/api.test.ts` (Cancellation & Seat Recovery) |
-| **5** | **Operator manifest and occupancy summaries reconcile with confirmed tickets** | Conductor passenger manifest sorted by seat number; automated mathematical reconciliation: `confirmedPassengers === bookedSeats === (totalSeats - availableSeats)`. | `tests/api.test.ts` (Manifest & Occupancy Reconciliation) |
+| # | Acceptance Criteria | Implementation & Defense Mechanism | Automated Test Evidence |
+|---|---------------------|-------------------------------------|:------------------------:|
+| **1** | **Search valid trip & book available seat** | Real-time seat inventory calculation, origin/destination/date search, filters (AC Sleeper / Seater / Non-AC, price range, departure window: Morning/Afternoon/Evening/Night, sorting by cheapest/fastest/rating). Interactive bus seat layout (2+2 seater and 2+1 sleeper deck). | **PASSED** (`tests/api.test.ts`) |
+| **2** | **Two users cannot confirm the same seat on one trip** | **ACID Database Transaction (`prisma.$transaction`)** + optimistic locking condition (`where: { isBooked: false }`) + composite schema constraint (`@@unique([tripId, seatNumber])`). If two users submit simultaneously, exactly one succeeds (HTTP 201) and one is safely rejected (HTTP 409 Conflict). | **PASSED** (Concurrently tested with `Promise.all` in test suite) |
+| **3** | **PNR includes correct passenger, route, date and seat details** | Unique PNR generation (`ALG-XXXXXX`), digital boarding pass, printable e-ticket modal, QR/barcode simulation, passenger manifest details. | **PASSED** (`tests/api.test.ts`) |
+| **4** | **Cancellation changes seat availability and refund status according to rule** | Configurable tiered cancellation policy engine (e.g., >24h = 90% refund, 12–24h = 50%, <12h = 0%). Atomic seat release back to available inventory and booking status transition to `CANCELLED`. | **PASSED** (`tests/api.test.ts`) |
+| **5** | **Operator manifest and occupancy summaries reconcile with confirmed tickets** | Conductor manifest sorted by seat number with live passenger boarding check-in; automated mathematical reconciliation: $\text{Manifest Count} = \text{Booked Seats} = (\text{Total Capacity} - \text{Available Seats})$. Verified reconciliation badge in operator portal. | **PASSED** (`tests/api.test.ts`) |
 
 ---
 
@@ -41,11 +43,11 @@ The **Algions Bus Booking Management System** is a responsive, database-backed e
 │   └── Centralized Error Handling (HTTP 400/401/403/409/500) │
 │                                                             │
 │  [ Service / Domain Layer ]                                 │
-│   ├── TripService (Search, filter, seat inventory)          │
+│   ├── TripService (Search, filter, seat inventory, sorting) │
 │   ├── BookingService (ACID seat lock, PNR generation)       │
 │   ├── CancellationService (Tiered refund policy engine)     │
 │   ├── ReportService (Manifest & Occupancy Reconciliation)   │
-│   └── OperatorService (Fleet, Routes, Stops management)     │
+│   └── OperatorService (Fleet, Routes, Stops, Trip dispatch) │
 │                                                             │
 │  [ Persistence Layer: Prisma ORM ]                          │
 │   ├── Transactions (prisma.$transaction)                    │
@@ -98,7 +100,7 @@ erDiagram
         string operatorId FK
         string busNumber UK
         string model
-        string busType "AC_SLEEPER | AC_SEATER | NON_AC_SEATER"
+        string busType "AC_SLEEPER | AC_SEATER | NON_AC_SEATER | LUXURY_MULTI_AXLE"
         int totalSeats
         string layoutType
     }
@@ -163,6 +165,8 @@ erDiagram
         string name
         int age
         string gender
+        boolean isBoarded
+        datetime boardedAt
     }
 
     CANCELLATION_RULE {
@@ -195,7 +199,8 @@ The system comes pre-seeded with verified test accounts across all roles:
 | Role | Email | Password | Permissions & Capabilities |
 |------|-------|----------|----------------------------|
 | **Admin** | `admin@algions.com` | `Password123!` | Full system access: fleet setup, route management, cancellation policy rule editing, system-wide audit logs. |
-| **Operator** | `operator@royalbus.com` | `Password123!` | Royal Express operator portal: trip dispatch, route occupancy analytics, passenger manifest export & reconciliation. |
+| **Operator** | `operator@royalbus.com` | `Password123!` | Royal Express operator portal: trip dispatch, route occupancy analytics, passenger manifest export & live boarding check-ins. |
+| **Operator** | `operator@vrlbus.com` | `Password123!` | VRL Travels fleet operator access. |
 | **Passenger** | `passenger@example.com` | `Password123!` | Search trips, select seats, book tickets, view e-tickets, cancel tickets with live refund calculation. |
 
 > **💡 Quick Demo Role Switcher**: The navigation bar includes one-click role switching pills ("Passenger", "Operator", "Admin") allowing immediate testing without manual re-login.
@@ -249,6 +254,7 @@ PASS tests/api.test.ts
   Bus Booking Management System - Acceptance & Integration Tests
     1. Trip Search & Discovery
       √ should search trips by origin and destination and return real-time available seat inventory
+      √ should support sorting trips by price ascending
       √ should retrieve full trip details with seat layout map
     2. Seat Booking, PNR Validation & Concurrency Protection
       √ CRITICAL CONCURRENCY TEST: Two users attempting to book the SAME seat simultaneously must result in 1 confirmation and 1 conflict rejection (HTTP 409)
@@ -259,14 +265,15 @@ PASS tests/api.test.ts
       √ Acceptance Criteria 4: Cancellation changes status to CANCELLED, processes refund, and restores seat to available
     4. Operator Manifest & Occupancy Reconciliation
       √ Acceptance Criteria 5: Manifest and occupancy summaries reconcile with confirmed tickets
+      √ should allow conductor/operator to toggle passenger boarding check-in status
       √ should retrieve operator dashboard metrics
     5. Server-Side RBAC Enforcement
       √ should reject a passenger attempting to create a trip with 403 Forbidden
       √ should reject unauthenticated requests to protected endpoints with 401 Unauthorized
 
 Test Suites: 1 passed, 1 total
-Tests:       11 passed, 11 total
-Time:        ~10 s
+Tests:       13 passed, 13 total
+Time:        ~12 s
 ```
 
 ---
@@ -283,7 +290,7 @@ Interactive OpenAPI Swagger UI is embedded directly into the backend server:
 | `POST` | `/api/auth/register` | Register new user account | Public |
 | `POST` | `/api/auth/login` | Login and obtain JWT token | Public |
 | `GET` | `/api/auth/me` | Fetch active user profile | Authenticated |
-| `GET` | `/api/trips/search` | Search trips with origin, destination, date, type filters | Public |
+| `GET` | `/api/trips/search` | Search trips with origin, destination, date, type, window, and sort filters | Public |
 | `GET` | `/api/trips/:id` | Fetch trip details & visual seat map | Public |
 | `POST` | `/api/trips` | Schedule new trip | `ADMIN`, `OPERATOR` |
 | `POST` | `/api/bookings` | Atomically reserve seats & generate unique PNR | `PASSENGER`, `ADMIN` |
@@ -292,6 +299,7 @@ Interactive OpenAPI Swagger UI is embedded directly into the backend server:
 | `GET` | `/api/cancellations/preview/:bookingId` | Preview refund breakdown by hours before departure | Authenticated |
 | `POST` | `/api/cancellations/:bookingId` | Cancel booking & release seats back to inventory | Authenticated |
 | `GET` | `/api/reports/manifest/:tripId` | Get reconciled passenger manifest | `ADMIN`, `OPERATOR` |
+| `PATCH`| `/api/reports/checkin/:passengerId`| Toggle passenger boarding check-in | `ADMIN`, `OPERATOR` |
 | `GET` | `/api/reports/dashboard` | Get operator KPIs & seat occupancy summary | `ADMIN`, `OPERATOR` |
 | `GET` | `/api/reports/audit-logs` | Query system audit trail | `ADMIN` |
 

@@ -16,7 +16,11 @@ import {
   ArrowRight,
   Sparkles,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  SlidersHorizontal,
+  Compass,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 export const TripSearchView: React.FC = () => {
@@ -28,6 +32,8 @@ export const TripSearchView: React.FC = () => {
   const [travelDate, setTravelDate] = useState(todayStr);
 
   const [busTypeFilter, setBusTypeFilter] = useState('');
+  const [timeWindowFilter, setTimeWindowFilter] = useState('');
+  const [sortBy, setSortBy] = useState('time_asc');
   const [maxPriceFilter, setMaxPriceFilter] = useState<number>(2000);
 
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -38,12 +44,16 @@ export const TripSearchView: React.FC = () => {
   const [activeSeatMapTrip, setActiveSeatMapTrip] = useState<Trip | null>(null);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
 
-  // Popular route shortcuts
+  // Popular Indian Bus Route Shortcuts
   const popularRoutes = [
     { from: 'Bengaluru', to: 'Chennai' },
     { from: 'Bengaluru', to: 'Hyderabad' },
+    { from: 'Bengaluru', to: 'Goa' },
     { from: 'Mumbai', to: 'Pune' },
-    { from: 'Delhi', to: 'Jaipur' }
+    { from: 'Mumbai', to: 'Goa' },
+    { from: 'Delhi', to: 'Jaipur' },
+    { from: 'Delhi', to: 'Manali' },
+    { from: 'Hyderabad', to: 'Vijayawada' }
   ];
 
   const fetchTrips = async () => {
@@ -55,6 +65,8 @@ export const TripSearchView: React.FC = () => {
       if (destination.trim()) params.destination = destination.trim();
       if (travelDate) params.travelDate = travelDate;
       if (busTypeFilter) params.busType = busTypeFilter;
+      if (timeWindowFilter) params.timeWindow = timeWindowFilter;
+      if (sortBy) params.sortBy = sortBy;
       if (maxPriceFilter) params.maxPrice = maxPriceFilter;
 
       const res = await api.get('/trips/search', { params });
@@ -68,7 +80,7 @@ export const TripSearchView: React.FC = () => {
 
   useEffect(() => {
     fetchTrips();
-  }, []);
+  }, [timeWindowFilter, sortBy, busTypeFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +90,6 @@ export const TripSearchView: React.FC = () => {
   const handleSelectPopularRoute = (from: string, to: string) => {
     setOrigin(from);
     setDestination(to);
-    // Trigger immediate search
     setTimeout(() => {
       fetchTrips();
     }, 50);
@@ -103,13 +114,13 @@ export const TripSearchView: React.FC = () => {
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>ACID Guaranteed & Real-Time Seat Integrity</span>
+              <span>ACID Guaranteed & Real-Time Seat Locking</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Book Verified Intercity Bus Tickets
+              India's Verified Intercity Bus Network
             </h1>
-            <p className="text-sm text-slate-300 max-w-lg mx-auto">
-              Real-time seat mapping, instant PNR generation, and automated refund calculation.
+            <p className="text-sm text-slate-300 max-w-xl mx-auto">
+              Real-time seat mapping across VRL, KSRTC, Orange, SRS, IntrCity & Zingbus.
             </p>
           </div>
 
@@ -187,8 +198,8 @@ export const TripSearchView: React.FC = () => {
           </form>
 
           {/* Quick Route Shortcut Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            <span className="text-xs text-slate-400 font-semibold">Popular Routes:</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <span className="text-xs text-slate-400 font-semibold">Major Hubs:</span>
             {popularRoutes.map((r, i) => (
               <button
                 key={i}
@@ -211,30 +222,58 @@ export const TripSearchView: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Filter className="w-4 h-4 text-rose-600" />
-                Filter Trips
+                Refine Search
               </span>
               <button
                 type="button"
                 onClick={() => {
                   setBusTypeFilter('');
+                  setTimeWindowFilter('');
+                  setSortBy('time_asc');
                   setMaxPriceFilter(2000);
                   setTimeout(fetchTrips, 10);
                 }}
                 className="text-[11px] font-bold text-rose-600 hover:underline"
               >
-                Reset
+                Reset All
               </button>
+            </div>
+
+            {/* Departure Time Slots */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2">Departure Window</label>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  { label: 'Morning (6-12)', value: 'morning' },
+                  { label: 'Afternoon (12-18)', value: 'afternoon' },
+                  { label: 'Evening (18-23)', value: 'evening' },
+                  { label: 'Night (23-6)', value: 'night' }
+                ].map((tw) => (
+                  <button
+                    key={tw.value}
+                    type="button"
+                    onClick={() => setTimeWindowFilter(timeWindowFilter === tw.value ? '' : tw.value)}
+                    className={`py-2 px-2.5 rounded-xl border text-center font-bold text-[11px] transition-all ${
+                      timeWindowFilter === tw.value
+                        ? 'bg-rose-50 border-rose-600 text-rose-700 shadow-sm'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {tw.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Bus Type */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-2">Bus Type</label>
+              <label className="block text-xs font-bold text-slate-700 mb-2">Bus Class</label>
               <div className="space-y-1.5">
                 {[
                   { label: 'All Bus Classes', value: '' },
-                  { label: 'AC Sleeper (2+1)', value: 'AC_SLEEPER' },
-                  { label: 'AC Seater (2+2)', value: 'AC_SEATER' },
-                  { label: 'Non-AC Seater', value: 'NON_AC_SEATER' }
+                  { label: 'AC Sleeper (2+1 Berths)', value: 'AC_SLEEPER' },
+                  { label: 'AC Seater (2+2 Luxury)', value: 'AC_SEATER' },
+                  { label: 'Non-AC Express', value: 'NON_AC_SEATER' }
                 ].map((item) => (
                   <label
                     key={item.value}
@@ -244,10 +283,7 @@ export const TripSearchView: React.FC = () => {
                       type="radio"
                       name="busType"
                       checked={busTypeFilter === item.value}
-                      onChange={() => {
-                        setBusTypeFilter(item.value);
-                        setTimeout(fetchTrips, 10);
-                      }}
+                      onChange={() => setBusTypeFilter(item.value)}
                       className="text-rose-600 focus:ring-rose-500"
                     />
                     <span>{item.label}</span>
@@ -259,7 +295,7 @@ export const TripSearchView: React.FC = () => {
             {/* Price Filter */}
             <div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-2">
-                <span>Max Fare</span>
+                <span>Maximum Fare</span>
                 <span className="text-rose-600">Up to ₹{maxPriceFilter}</span>
               </div>
               <input
@@ -283,11 +319,29 @@ export const TripSearchView: React.FC = () => {
 
         {/* Trips List Area */}
         <div className="lg:col-span-3 space-y-4">
-          {/* Header Bar */}
-          <div className="flex items-center justify-between px-1">
+          {/* Header Bar with Sorting */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
             <span className="text-xs font-bold text-slate-500">
-              Showing <span className="text-slate-900 font-extrabold">{trips.length}</span> verified trips on {travelDate}
+              Found <span className="text-slate-900 font-extrabold">{trips.length}</span> verified trips on {travelDate}
             </span>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Sort:
+              </span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="text-xs font-bold bg-white border border-slate-300 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              >
+                <option value="time_asc">Earliest Departure</option>
+                <option value="price_asc">Cheapest Fare</option>
+                <option value="price_desc">Highest Fare</option>
+                <option value="rating_desc">Highest Rated Operator</option>
+                <option value="duration_asc">Fastest Duration</option>
+              </select>
+            </div>
           </div>
 
           {error && (
@@ -300,7 +354,7 @@ export const TripSearchView: React.FC = () => {
           {isLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-3 bg-white rounded-2xl border border-slate-200">
               <div className="w-8 h-8 border-3 border-rose-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-semibold">Querying live seat inventory...</p>
+              <p className="text-xs font-semibold">Querying live seat inventory across operators...</p>
             </div>
           ) : trips.length === 0 ? (
             <div className="py-16 text-center bg-white rounded-2xl border border-slate-200 p-6 space-y-3">
@@ -309,7 +363,7 @@ export const TripSearchView: React.FC = () => {
               </div>
               <h3 className="text-sm font-bold text-slate-800">No Scheduled Trips Found</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                No trips matching "{origin}" to "{destination}" on {travelDate}. Try searching for tomorrow or another route.
+                No trips matching "{origin}" to "{destination}" on {travelDate}. Try searching for tomorrow or another major corridor.
               </p>
               <button
                 type="button"
@@ -335,14 +389,14 @@ export const TripSearchView: React.FC = () => {
                     className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                   >
                     {/* Operator & Bus Details */}
-                    <div className="space-y-1.5 min-w-[200px]">
+                    <div className="space-y-1.5 min-w-[210px]">
                       <div className="flex items-center gap-2">
                         <span className="font-extrabold text-sm text-slate-900">
                           {trip.bus.operator?.name}
                         </span>
                         <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold">
                           <Star className="w-2.5 h-2.5 fill-emerald-600 stroke-none" />
-                          <span>{trip.bus.operator?.rating || 4.5}</span>
+                          <span>{trip.bus.operator?.rating || 4.7}</span>
                         </div>
                       </div>
 
@@ -374,6 +428,10 @@ export const TripSearchView: React.FC = () => {
                             <span>Water</span>
                           </div>
                         )}
+                        <div className="flex items-center gap-1 text-[10px]" title="Live GPS Tracking">
+                          <Zap className="w-3.5 h-3.5 text-purple-500" />
+                          <span>Live Track</span>
+                        </div>
                       </div>
                     </div>
 
@@ -392,10 +450,10 @@ export const TripSearchView: React.FC = () => {
                         <div className="text-[10px] font-bold text-slate-400">
                           {trip.route.estimatedHours}h
                         </div>
-                        <div className="w-16 h-0.5 bg-slate-200 relative flex items-center justify-center">
+                        <div className="w-20 h-0.5 bg-slate-200 relative flex items-center justify-center">
                           <div className="w-2 h-2 rounded-full bg-rose-500" />
                         </div>
-                        <div className="text-[10px] text-slate-400">Non-Stop</div>
+                        <div className="text-[10px] text-slate-400">Direct Route</div>
                       </div>
 
                       <div>
@@ -411,7 +469,7 @@ export const TripSearchView: React.FC = () => {
                     {/* Fare & CTA */}
                     <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 gap-2">
                       <div className="text-left sm:text-right">
-                        <div className="text-xs text-slate-400 font-semibold">Starts from</div>
+                        <div className="text-xs text-slate-400 font-semibold">Base Fare</div>
                         <div className="text-xl font-black text-rose-600">
                           ₹{trip.baseFare.toLocaleString()}
                         </div>
@@ -430,9 +488,10 @@ export const TripSearchView: React.FC = () => {
                         type="button"
                         disabled={available === 0}
                         onClick={() => handleOpenSeatMap(trip.id)}
-                        className="py-2 px-4 bg-slate-900 hover:bg-rose-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+                        className="py-2.5 px-4 bg-slate-900 hover:bg-rose-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
                       >
-                        Select Seats
+                        <span>Select Seats</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

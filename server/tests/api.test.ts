@@ -77,6 +77,18 @@ describe('Bus Booking Management System - Acceptance & Integration Tests', () =>
       expect(trip.route).toHaveProperty('droppingPoints');
     });
 
+    it('should support sorting trips by price ascending', async () => {
+      const res = await request(app)
+        .get('/api/trips/search')
+        .query({ origin: 'Bengaluru', destination: 'Chennai', sortBy: 'price_asc' });
+
+      expect(res.status).toBe(200);
+      const fares = res.body.data.map((t: any) => t.baseFare);
+      for (let i = 1; i < fares.length; i++) {
+        expect(fares[i]).toBeGreaterThanOrEqual(fares[i - 1]);
+      }
+    });
+
     it('should retrieve full trip details with seat layout map', async () => {
       const res = await request(app).get(`/api/trips/${testTripId}`);
       expect(res.status).toBe(200);
@@ -143,7 +155,7 @@ describe('Bus Booking Management System - Acceptance & Integration Tests', () =>
     });
 
     it('should reject a subsequent booking request for an already booked seat', async () => {
-      // Attempt to book the targetSeat again
+      // Find an already booked seat on the trip
       const freshTrip = await prisma.trip.findUnique({
         where: { id: testTripId },
         include: { seats: { where: { isBooked: true } } }
@@ -301,6 +313,23 @@ describe('Bus Booking Management System - Acceptance & Integration Tests', () =>
       expect(reconciliation.manifestPassengerCount).toBe(manifest.length);
       expect(reconciliation.isReconciled).toBe(true);
       expect(reconciliation.totalSeats).toBe(reconciliation.bookedSeats + reconciliation.availableSeats);
+    });
+
+    it('should allow conductor/operator to toggle passenger boarding check-in status', async () => {
+      const manifestRes = await request(app)
+        .get(`/api/reports/manifest/${testTripId}`)
+        .set('Authorization', `Bearer ${operatorToken}`);
+
+      const passenger = manifestRes.body.data.manifest[0];
+      expect(passenger).toBeDefined();
+
+      // Toggle check-in
+      const checkinRes = await request(app)
+        .patch(`/api/reports/checkin/${passenger.id}`)
+        .set('Authorization', `Bearer ${operatorToken}`);
+
+      expect(checkinRes.status).toBe(200);
+      expect(checkinRes.body.data.isBoarded).toBe(!passenger.isBoarded);
     });
 
     it('should retrieve operator dashboard metrics', async () => {

@@ -13,6 +13,14 @@ router.get(
   ReportController.getManifest
 );
 
+// Conductor passenger check-in toggle
+router.patch(
+  '/checkin/:passengerId',
+  authenticate,
+  requireRole(['ADMIN', 'OPERATOR']),
+  ReportController.toggleCheckIn
+);
+
 // Dashboard metrics
 router.get(
   '/dashboard',

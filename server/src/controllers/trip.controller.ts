@@ -23,7 +23,9 @@ export class TripController {
         busType,
         operatorId,
         minPrice,
-        maxPrice
+        maxPrice,
+        timeWindow,
+        sortBy
       } = req.query;
 
       const trips = await TripService.searchTrips({
@@ -33,7 +35,9 @@ export class TripController {
         busType: busType ? String(busType) : undefined,
         operatorId: operatorId ? String(operatorId) : undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
-        maxPrice: maxPrice ? Number(maxPrice) : undefined
+        maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        timeWindow: timeWindow ? String(timeWindow) : undefined,
+        sortBy: sortBy ? String(sortBy) : undefined
       });
 
       return res.status(200).json({

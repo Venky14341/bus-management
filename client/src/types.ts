@@ -90,6 +90,8 @@ export interface Passenger {
   name: string;
   age: number;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
+  isBoarded?: boolean;
+  boardedAt?: string;
 }
 
 export interface Booking {
@@ -126,10 +128,13 @@ export interface RefundPreview {
 }
 
 export interface ManifestPassenger {
+  id: string;
   seatNumber: string;
   passengerName: string;
   age: number;
   gender: string;
+  isBoarded: boolean;
+  boardedAt?: string | null;
   pnr: string;
   boardingPoint: string;
   droppingPoint: string;

@@ -38,10 +38,13 @@ export class ReportService {
       totalGrossRevenue += booking.totalAmount;
       for (const passenger of booking.passengers) {
         manifestRows.push({
+          id: passenger.id,
           seatNumber: passenger.seatNumber,
           passengerName: passenger.name,
           age: passenger.age,
           gender: passenger.gender,
+          isBoarded: passenger.isBoarded,
+          boardedAt: passenger.boardedAt,
           pnr: booking.pnr,
           boardingPoint: booking.boardingPoint,
           droppingPoint: booking.droppingPoint,
@@ -101,6 +104,46 @@ export class ReportService {
   }
 
   /**
+   * Conductor check-in toggle for boarded passengers
+   */
+  static async togglePassengerCheckIn(passengerId: string, actorId: string) {
+    const passenger = await prisma.passenger.findUnique({
+      where: { id: passengerId },
+      include: { booking: true }
+    });
+
+    if (!passenger) {
+      throw new AppError('Passenger record not found', 404);
+    }
+
+    const nextState = !passenger.isBoarded;
+    const updated = await prisma.passenger.update({
+      where: { id: passengerId },
+      data: {
+        isBoarded: nextState,
+        boardedAt: nextState ? new Date() : null
+      }
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId,
+        action: nextState ? 'PASSENGER_BOARDED' : 'PASSENGER_UNBOARDED',
+        entityType: 'Passenger',
+        entityId: passengerId,
+        details: JSON.stringify({
+          passengerName: passenger.name,
+          seatNumber: passenger.seatNumber,
+          pnr: passenger.booking.pnr,
+          isBoarded: nextState
+        })
+      }
+    });
+
+    return updated;
+  }
+
+  /**
    * Generates operational dashboard summary metrics
    */
   static async getDashboardMetrics(operatorId?: string) {
@@ -129,7 +172,7 @@ export class ReportService {
           ...tripFilter,
           status: 'SCHEDULED'
         },
-        take: 8,
+        take: 12,
         orderBy: [{ travelDate: 'asc' }, { departureTime: 'asc' }],
         include: {
           bus: { include: { operator: true } },
