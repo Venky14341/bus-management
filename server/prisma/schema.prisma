@@ -1,0 +1,177 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("PASSENGER") // ADMIN, OPERATOR, PASSENGER
+  phone        String?
+  operatorId   String?
+  operator     Operator?  @relation(fields: [operatorId], references: [id])
+  bookings     Booking[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Operator {
+  id           String   @id @default(cuid())
+  name         String
+  code         String   @unique
+  contactEmail String
+  contactPhone String
+  address      String?
+  rating       Float    @default(4.6)
+  active       Boolean  @default(true)
+  buses        Bus[]
+  users        User[]
+  createdAt    DateTime @default(now())
+}
+
+model Bus {
+  id            String   @id @default(cuid())
+  operatorId    String
+  operator      Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  busNumber     String   @unique
+  model         String
+  busType       String   // AC_SLEEPER, AC_SEATER, NON_AC_SEATER, LUXURY_MULTI_AXLE
+  totalSeats    Int
+  layoutType    String   @default("2+2") // 2+2, 2+1_SLEEPER
+  hasWifi       Boolean  @default(true)
+  hasCharging   Boolean  @default(true)
+  hasWaterBottle Boolean @default(true)
+  trips         Trip[]
+  createdAt     DateTime @default(now())
+}
+
+model Route {
+  id              String      @id @default(cuid())
+  sourceCity      String
+  destinationCity String
+  distanceKm      Int
+  estimatedHours  Float
+  active          Boolean     @default(true)
+  stops           RouteStop[]
+  trips           Trip[]
+  createdAt       DateTime    @default(now())
+
+  @@index([sourceCity, destinationCity])
+}
+
+model RouteStop {
+  id            String  @id @default(cuid())
+  routeId       String
+  route         Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stopName      String
+  stopType      String  @default("BOTH") // BOARDING, DROPPING, BOTH
+  sequenceOrder Int
+  offsetMinutes Int     @default(0)
+
+  @@index([routeId, sequenceOrder])
+}
+
+model Trip {
+  id            String     @id @default(cuid())
+  routeId       String
+  route         Route      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  busId         String
+  bus           Bus        @relation(fields: [busId], references: [id], onDelete: Cascade)
+  departureTime String     // HH:mm, e.g. "21:30"
+  arrivalTime   String     // HH:mm, e.g. "06:30"
+  travelDate    String     // YYYY-MM-DD
+  baseFare      Float
+  status        String     @default("SCHEDULED") // SCHEDULED, ON_THE_WAY, COMPLETED, CANCELLED
+  seats         TripSeat[]
+  bookings      Booking[]
+  createdAt     DateTime   @default(now())
+
+  @@index([travelDate, status])
+  @@index([routeId, travelDate])
+}
+
+model TripSeat {
+  id               String   @id @default(cuid())
+  tripId           String
+  trip             Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  seatNumber       String   // e.g. "1A", "1B", "U1", "L1"
+  deck             String   @default("LOWER") // LOWER, UPPER
+  seatType         String   @default("SEATER") // SEATER, SLEEPER
+  isBooked         Boolean  @default(false)
+  currentBookingId String?
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tripId, seatNumber])
+  @@index([tripId, isBooked])
+}
+
+model Booking {
+  id                 String      @id @default(cuid())
+  pnr                String      @unique
+  tripId             String
+  trip               Trip        @relation(fields: [tripId], references: [id])
+  userId             String
+  user               User        @relation(fields: [userId], references: [id])
+  boardingPoint      String
+  droppingPoint      String
+  totalAmount        Float
+  status             String      @default("CONFIRMED") // CONFIRMED, CANCELLED, COMPLETED
+  paymentStatus      String      @default("PAID") // PAID, REFUNDED, PARTIALLY_REFUNDED
+  refundAmount       Float       @default(0.0)
+  cancellationFee    Float       @default(0.0)
+  cancelledAt        DateTime?
+  cancellationReason String?
+  passengers         Passenger[]
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([pnr])
+  @@index([userId])
+  @@index([tripId, status])
+}
+
+model Passenger {
+  id         String  @id @default(cuid())
+  bookingId  String
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seatNumber String
+  name       String
+  age        Int
+  gender     String  @default("OTHER") // MALE, FEMALE, OTHER
+
+  @@index([bookingId])
+}
+
+model CancellationRule {
+  id                      String   @id @default(cuid())
+  name                    String
+  minHoursBeforeDeparture Int      // e.g. 24
+  maxHoursBeforeDeparture Int?     // e.g. null for >24, or 24 for 12-24
+  refundPercentage        Float    // e.g. 90.0
+  cancellationFeePercentage Float  // e.g. 10.0
+  active                  Boolean  @default(true)
+  createdAt               DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?
+  actorRole   String?
+  actorEmail  String?
+  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action      String   // BOOKING_CREATED, BOOKING_CANCELLED, TRIP_CREATED, etc.
+  entityType  String   // Booking, Trip, Seat, Cancellation
+  entityId    String
+  details     String   // JSON string
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

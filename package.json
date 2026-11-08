@@ -1,0 +1,26 @@
+{
+  "name": "bus-booking-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-Stack Bus Booking Management System - ALGIONS AI LABS Assessment",
+  "scripts": {
+    "setup": "npm --prefix server install && npm --prefix client install && npm --prefix server run db:push && npm --prefix server run db:seed",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "seed": "npm --prefix server run db:seed",
+    "test": "npm --prefix server test",
+    "start": "npm --prefix server start"
+  },
+  "keywords": [
+    "bus-booking",
+    "algions",
+    "full-stack",
+    "react",
+    "node",
+    "prisma",
+    "typescript"
+  ],
+  "author": "Algions AI Labs Assessment",
+  "license": "MIT"
+}
