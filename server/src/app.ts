@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './swagger';
 import authRoutes from './routes/auth.routes';
@@ -20,9 +21,32 @@ app.use(express.json());
 // API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// Healthcheck
+// Favicon
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+// Healthcheck & API Info
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Bus Booking Management System API Server',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      docs: '/api-docs',
+      auth: '/api/auth',
+      trips: '/api/trips',
+      bookings: '/api/bookings',
+      cancellations: '/api/cancellations',
+      operators: '/api/operators',
+      reports: '/api/reports'
+    }
+  });
 });
 
 // Mount Routes
@@ -41,9 +65,17 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) {
     return next();
   }
-  res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(404).json({ message: 'API Route Not Found and Client build not found' });
+  const indexPath = path.join(clientDistPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  res.status(200).json({
+    status: 'online',
+    service: 'BusGo API Server',
+    message: 'Backend server is active. Connect with frontend on Vercel.',
+    endpoints: {
+      health: '/api/health',
+      docs: '/api-docs'
     }
   });
 });
