@@ -31,28 +31,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize or fetch current user profile
   useEffect(() => {
+    let isMounted = true;
+
     async function loadUser() {
       const savedToken = localStorage.getItem('algions_auth_token');
       const savedUser = localStorage.getItem('algions_auth_user');
 
       if (savedToken && savedUser) {
         try {
-          setUser(JSON.parse(savedUser));
-          setToken(savedToken);
+          const parsed = JSON.parse(savedUser);
+          if (isMounted) {
+            setUser(parsed);
+            setToken(savedToken);
+          }
           const res = await api.get('/auth/me');
-          setUser(res.data.data);
-          localStorage.setItem('algions_auth_user', JSON.stringify(res.data.data));
+          if (isMounted) {
+            setUser(res.data.data);
+            localStorage.setItem('algions_auth_user', JSON.stringify(res.data.data));
+          }
         } catch {
-          console.warn('Stale auth session, auto-logging in default passenger');
-          await quickSwitchRole('PASSENGER');
+          console.warn('Stale auth session or sleeping server, switching to passenger session');
+          try {
+            await quickSwitchRole('PASSENGER');
+          } catch (e) {
+            console.warn('API backend unreachable or waking up:', e);
+            if (isMounted) {
+              setUser({
+                id: 'guest',
+                name: 'Guest Passenger',
+                email: 'passenger@example.com',
+                role: 'PASSENGER'
+              });
+            }
+          }
         }
       } else {
-        await quickSwitchRole('PASSENGER');
+        try {
+          await quickSwitchRole('PASSENGER');
+        } catch (e) {
+          console.warn('API backend unreachable or waking up:', e);
+          if (isMounted) {
+            setUser({
+              id: 'guest',
+              name: 'Guest Passenger',
+              email: 'passenger@example.com',
+              role: 'PASSENGER'
+            });
+          }
+        }
       }
-      setIsLoading(false);
+
+      if (isMounted) {
+        setIsLoading(false);
+      }
     }
 
     loadUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (email: string, password = 'Password123!') => {
