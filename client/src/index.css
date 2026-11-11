@@ -4,12 +4,70 @@
 
 @layer base {
   body {
-    @apply antialiased bg-slate-50 text-slate-800;
+    background-color: #F7F9FC;
+    color: #172033;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Custom scrollbars */
+/* ==========================================================================
+   BusGo Commercial Theme Palette - 100% Guaranteed Fallback Styles
+   ========================================================================== */
+
+/* Primary Navy (#101828) */
+.bg-navy, [class*="bg-navy"] { background-color: #101828; }
+.bg-navy-950, .bg-navy-900 { background-color: #0B0F19; }
+.bg-navy-800 { background-color: #1D2939; }
+.bg-navy-700 { background-color: #344054; }
+.text-navy, [class*="text-navy"] { color: #101828; }
+.text-navy-900 { color: #0B0F19; }
+.text-navy-800 { color: #1D2939; }
+.border-navy, [class*="border-navy"] { border-color: #101828; }
+
+/* Secondary Royal Blue (#2563EB) */
+.bg-royalblue, .bg-royalblue-600, .bg-blue-primary { background-color: #2563EB !important; }
+.hover\:bg-royalblue:hover, .hover\:bg-royalblue-700:hover { background-color: #1D4ED8 !important; }
+.text-royalblue, .text-royalblue-600 { color: #2563EB !important; }
+.hover\:text-royalblue:hover, .hover\:text-royalblue-700:hover { color: #1D4ED8 !important; }
+.border-royalblue, .border-royalblue-600 { border-color: #2563EB !important; }
+.bg-royalblue-50 { background-color: #EFF6FF !important; }
+.bg-royalblue-100 { background-color: #DBEAFE !important; }
+.bg-royalblue-200 { background-color: #BFDBFE !important; }
+.text-royalblue-700 { color: #1D4ED8 !important; }
+.text-royalblue-800 { color: #1E40AF !important; }
+.text-royalblue-200 { color: #BFDBFE !important; }
+.border-royalblue-200 { border-color: #BFDBFE !important; }
+
+/* Accent Orange (#FF8A3D) */
+.bg-accent, .bg-accent-500, .bg-orange-accent { background-color: #FF8A3D !important; }
+.hover\:bg-accent:hover, .hover\:bg-accent-600:hover { background-color: #EA580C !important; }
+.text-accent, .text-accent-500 { color: #FF8A3D !important; }
+.hover\:text-accent:hover { color: #EA580C !important; }
+.border-accent { border-color: #FF8A3D !important; }
+.bg-accent-light { background-color: #FFF4ED !important; }
+
+/* Backgrounds & Text */
+.bg-travelbg { background-color: #F7F9FC !important; }
+.text-traveltext { color: #172033 !important; }
+.text-travelmuted { color: #667085 !important; }
+.bg-travelsuccess { background-color: #12B76A !important; }
+.text-travelsuccess { color: #12B76A !important; }
+.bg-travelerror { background-color: #F04438 !important; }
+.text-travelerror { color: #F04438 !important; }
+
+/* Opacity fallbacks */
+.bg-navy-950\/70, .bg-navy\/70 { background-color: rgba(11, 15, 25, 0.7) !important; }
+.bg-navy-950\/80, .bg-navy\/80 { background-color: rgba(11, 15, 25, 0.8) !important; }
+.bg-navy-950\/90, .bg-navy\/90 { background-color: rgba(11, 15, 25, 0.9) !important; }
+.bg-royalblue\/10 { background-color: rgba(37, 99, 235, 0.1) !important; }
+.bg-royalblue\/20 { background-color: rgba(37, 99, 235, 0.2) !important; }
+.border-royalblue\/20 { border-color: rgba(37, 99, 235, 0.2) !important; }
+.border-royalblue\/30 { border-color: rgba(37, 99, 235, 0.3) !important; }
+
+/* Custom smooth scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -23,4 +81,13 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
 }

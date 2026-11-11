@@ -205,8 +205,20 @@ export class TripService {
     const lowerDeck = trip.seats.filter(s => s.deck === 'LOWER');
     const upperDeck = trip.seats.filter(s => s.deck === 'UPPER');
 
+    const boardingPoints = trip.route.stops.filter(
+      s => s.stopType === 'BOARDING' || s.stopType === 'BOTH'
+    );
+    const droppingPoints = trip.route.stops.filter(
+      s => s.stopType === 'DROPPING' || s.stopType === 'BOTH'
+    );
+
     return {
       ...trip,
+      route: {
+        ...trip.route,
+        boardingPoints,
+        droppingPoints
+      },
       inventory: {
         totalSeats,
         bookedSeats,

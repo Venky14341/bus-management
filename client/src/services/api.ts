@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+// Support custom backend URL via Vite env variable (e.g. for Vercel -> Render deployment)
+const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (!envUrl) return '/api';
+  return envUrl.endsWith('/api') ? envUrl : `${envUrl.replace(/\/+$/, '')}/api`;
+};
+
 export const api = axios.create({
-  baseURL: '/api'
+  baseURL: getApiBaseUrl()
 });
 
 // Attach Authorization header if JWT token exists in localStorage
