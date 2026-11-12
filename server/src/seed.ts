@@ -97,6 +97,28 @@ async function main() {
     }
   });
 
+  const opVrl = await prisma.user.create({
+    data: {
+      name: 'Anand Sankeshwar (VRL Travels Ops)',
+      email: 'operator@vrlbus.com',
+      passwordHash,
+      role: 'OPERATOR',
+      phone: '+91 99000 00003',
+      operatorId: operators['VRL'].id
+    }
+  });
+
+  const opKsrtc = await prisma.user.create({
+    data: {
+      name: 'Suresh Gowda (KSRTC Ops)',
+      email: 'operator@ksrtc.org',
+      passwordHash,
+      role: 'OPERATOR',
+      phone: '+91 99000 00004',
+      operatorId: operators['KSRTC'].id
+    }
+  });
+
   const passengerUser1 = await prisma.user.create({
     data: {
       name: 'Rahul Mehta',
@@ -116,6 +138,28 @@ async function main() {
       phone: '+91 98765 00002'
     }
   });
+
+  const passengerUser3 = await prisma.user.create({
+    data: {
+      name: 'Karthik Raman',
+      email: 'karthik@example.com',
+      passwordHash,
+      role: 'PASSENGER',
+      phone: '+91 98765 00003'
+    }
+  });
+
+  const passengerUser4 = await prisma.user.create({
+    data: {
+      name: 'Priya Sharma',
+      email: 'priya@example.com',
+      passwordHash,
+      role: 'PASSENGER',
+      phone: '+91 98765 00004'
+    }
+  });
+
+  const passengerUsersList = [passengerUser1, passengerUser2, passengerUser3, passengerUser4];
 
   // 6. Routes (All strictly <= 1000 km, no route exceeds 1000 km)
   const routesData = [
@@ -668,6 +712,189 @@ async function main() {
         details: JSON.stringify({ pnr: b2.pnr, refundAmount: 585.0, fee: 65.0, reason: 'Travel plans rescheduled' })
       }
     });
+
+    // 10. Comprehensive Operational Bookings & Manifests across Operators
+    console.log('Populating verified operational passenger manifests across Royal Express, VRL & fleet corridors...');
+
+    const samplePassengers = [
+      { name: 'Karthik Raman', age: 31, gender: 'MALE' },
+      { name: 'Pooja Hegde', age: 29, gender: 'FEMALE' },
+      { name: 'Vikramaditya Reddy', age: 35, gender: 'MALE' },
+      { name: 'Deepa Nair', age: 32, gender: 'FEMALE' },
+      { name: 'Rajesh Kumar', age: 46, gender: 'MALE' },
+      { name: 'Sunita Kumar', age: 43, gender: 'FEMALE' },
+      { name: 'Arjun Das', age: 29, gender: 'MALE' },
+      { name: 'Meera Nambiar', age: 28, gender: 'FEMALE' },
+      { name: 'Mohammed Faizan', age: 33, gender: 'MALE' },
+      { name: 'Ayesha Siddiqua', age: 27, gender: 'FEMALE' },
+      { name: 'Suresh Prabhu', age: 52, gender: 'MALE' },
+      { name: 'Kavya Madhavan', age: 26, gender: 'FEMALE' },
+      { name: 'Nikhil Joshi', age: 24, gender: 'MALE' },
+      { name: 'Divya Bharathi', age: 30, gender: 'FEMALE' },
+      { name: 'Harish Venkatesh', age: 41, gender: 'MALE' },
+      { name: 'Rohan Verma', age: 27, gender: 'MALE' },
+      { name: 'Swati Deshmukh', age: 32, gender: 'FEMALE' },
+      { name: 'Aditya Birla', age: 39, gender: 'MALE' },
+      { name: 'Manoj Bajpayee', age: 48, gender: 'MALE' },
+      { name: 'Preeti Zinta', age: 34, gender: 'FEMALE' },
+      { name: 'Vishal Dadlani', age: 42, gender: 'MALE' },
+      { name: 'Neha Kakkar', age: 28, gender: 'FEMALE' },
+      { name: 'Siddharth Roy', age: 36, gender: 'MALE' },
+      { name: 'Pallavi Sharda', age: 31, gender: 'FEMALE' },
+      { name: 'Gautam Gambhir', age: 44, gender: 'MALE' },
+      { name: 'Geetha Govindam', age: 53, gender: 'FEMALE' },
+      { name: 'Ravi Teja', age: 38, gender: 'MALE' },
+      { name: 'Keerthy Suresh', age: 27, gender: 'FEMALE' },
+      { name: 'Prashanth Neel', age: 45, gender: 'MALE' },
+      { name: 'Tanvi Shah', age: 25, gender: 'FEMALE' },
+      { name: 'Manish Malhotra', age: 49, gender: 'MALE' },
+      { name: 'Anupama Menon', age: 26, gender: 'FEMALE' }
+    ];
+
+    const targetTrips = await prisma.trip.findMany({
+      where: {
+        id: { not: primaryDemoTrip.id }
+      },
+      include: {
+        bus: { include: { operator: true } },
+        route: { include: { stops: { orderBy: { sequenceOrder: 'asc' } } } },
+        seats: true
+      }
+    });
+
+    let seededBookingCount = 0;
+    let seededPassengerCount = 0;
+    let pnrSequence = 101000;
+
+    for (const trip of targetTrips) {
+      const isPriorityOperator = ['ROYAL', 'VRL', 'KSRTC', 'ORANGE', 'INTRCITY'].includes(trip.bus.operator.code);
+      const isEarlyDate = trip.travelDate === dates[0] || trip.travelDate === dates[1] || trip.travelDate === dates[2];
+
+      if (!isPriorityOperator && !isEarlyDate) {
+        continue;
+      }
+
+      const availableSeats = trip.seats.filter(s => !s.isBooked);
+      if (availableSeats.length === 0) continue;
+
+      let targetOccupancyRatio = 0.65;
+      if (trip.travelDate === dates[0]) targetOccupancyRatio = 0.72 + (Math.random() * 0.16);
+      else if (trip.travelDate === dates[1]) targetOccupancyRatio = 0.60 + (Math.random() * 0.18);
+      else targetOccupancyRatio = 0.40 + (Math.random() * 0.22);
+
+      const seatsToBookCount = Math.min(
+        availableSeats.length,
+        Math.floor(trip.seats.length * targetOccupancyRatio)
+      );
+
+      const boardingStops = trip.route.stops.filter(s => s.stopType === 'BOARDING' || s.stopType === 'BOTH');
+      const droppingStops = trip.route.stops.filter(s => s.stopType === 'DROPPING' || s.stopType === 'BOTH');
+
+      const defaultBoarding = boardingStops.length > 0 ? boardingStops[0].stopName : `${trip.route.sourceCity} Central`;
+      const defaultDropping = droppingStops.length > 0 ? droppingStops[droppingStops.length - 1].stopName : `${trip.route.destinationCity} Central`;
+
+      let seatIndex = 0;
+      while (seatIndex < seatsToBookCount) {
+        const passengersInGroup = (seatIndex + 1 < seatsToBookCount && Math.random() > 0.45) ? 2 : 1;
+        const assignedSeats = availableSeats.slice(seatIndex, seatIndex + passengersInGroup);
+        if (assignedSeats.length === 0) break;
+
+        const bookingUser = passengerUsersList[Math.floor(Math.random() * passengerUsersList.length)];
+        const pnrNumber = `ALG-${pnrSequence++}`;
+
+        const boardPoint = boardingStops.length > 0
+          ? boardingStops[Math.floor(Math.random() * Math.min(2, boardingStops.length))].stopName
+          : defaultBoarding;
+        const dropPoint = droppingStops.length > 0
+          ? droppingStops[Math.floor(Math.random() * droppingStops.length)].stopName
+          : defaultDropping;
+
+        const isToday = trip.travelDate === dates[0];
+        const groupPassengers = assignedSeats.map((seat, pSubIdx) => {
+          const passData = samplePassengers[(seededPassengerCount + pSubIdx) % samplePassengers.length];
+          const isBoarded = isToday ? (Math.random() > 0.3) : false;
+          return {
+            seatNumber: seat.seatNumber,
+            name: passData.name,
+            age: passData.age,
+            gender: passData.gender,
+            isBoarded,
+            boardedAt: isBoarded ? new Date(Date.now() - Math.floor(Math.random() * 7200000)) : null
+          };
+        });
+
+        const totalAmount = trip.baseFare * assignedSeats.length;
+
+        const createdBooking = await prisma.booking.create({
+          data: {
+            pnr: pnrNumber,
+            tripId: trip.id,
+            userId: bookingUser.id,
+            boardingPoint: boardPoint,
+            droppingPoint: dropPoint,
+            totalAmount,
+            status: 'CONFIRMED',
+            paymentStatus: 'PAID',
+            passengers: {
+              create: groupPassengers
+            }
+          }
+        });
+
+        const assignedSeatNumbers = assignedSeats.map(s => s.seatNumber);
+        await prisma.tripSeat.updateMany({
+          where: {
+            tripId: trip.id,
+            seatNumber: { in: assignedSeatNumbers }
+          },
+          data: {
+            isBooked: true,
+            currentBookingId: createdBooking.id
+          }
+        });
+
+        seededBookingCount++;
+        seededPassengerCount += assignedSeats.length;
+        seatIndex += passengersInGroup;
+      }
+
+      if (Math.random() < 0.25) {
+        const cancelUser = passengerUsersList[Math.floor(Math.random() * passengerUsersList.length)];
+        const cancelPnr = `ALG-${pnrSequence++}`;
+        const cancelFare = trip.baseFare;
+        const refundAmt = Math.round(cancelFare * 0.9);
+        const feeAmt = Math.round(cancelFare * 0.1);
+
+        await prisma.booking.create({
+          data: {
+            pnr: cancelPnr,
+            tripId: trip.id,
+            userId: cancelUser.id,
+            boardingPoint: defaultBoarding,
+            droppingPoint: defaultDropping,
+            totalAmount: cancelFare,
+            status: 'CANCELLED',
+            paymentStatus: 'REFUNDED',
+            refundAmount: refundAmt,
+            cancellationFee: feeAmt,
+            cancelledAt: new Date(Date.now() - Math.floor(Math.random() * 14400000)),
+            cancellationReason: 'Passenger schedule changed (>24h window)',
+            passengers: {
+              create: [
+                {
+                  seatNumber: 'CAN-1',
+                  name: samplePassengers[seededPassengerCount % samplePassengers.length].name,
+                  age: 30,
+                  gender: 'FEMALE'
+                }
+              ]
+            }
+          }
+        });
+      }
+    }
+
+    console.log(`✅ Seeded ${seededBookingCount} confirmed bookings and ${seededPassengerCount} passengers across active fleets!`);
   }
 
   console.log(`✅ Successfully seeded ${totalTripsCreated} trips across 6 operational dates!`);
